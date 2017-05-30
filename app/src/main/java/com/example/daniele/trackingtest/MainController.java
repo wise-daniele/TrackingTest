@@ -29,7 +29,10 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 /**
  * Created by daniele on 29/05/17.
@@ -47,7 +50,8 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     private GoogleMap mMap;
     private LocationManager mLocationManager;
     private Location mCurrentLocation;
-    LocationRequest mLocationRequest;
+    private LocationRequest mLocationRequest;
+    private Marker mCurrentLocationMarker;
 
     public MainController(MainActivity activity, SupportMapFragment mapFragment){
         mActivity = activity;
@@ -166,7 +170,7 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     public void moveMapCameraToCurrentLocation(){
         LatLng latLng = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
         CameraUpdate myCamera = CameraUpdateFactory.newLatLng(latLng);
-        CameraUpdate zoom = CameraUpdateFactory.zoomTo(13);
+        CameraUpdate zoom = CameraUpdateFactory.zoomTo(17);
         mMap.moveCamera(myCamera);
         mMap.animateCamera(zoom);
     }
@@ -207,6 +211,16 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     @Override
     public void onLocationChanged(Location location) {
         mCurrentLocation = location;
+        LatLng latLng = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
+        if (mCurrentLocationMarker != null) {
+            mCurrentLocationMarker.remove();
+        }
+        MarkerOptions markerOptions = new MarkerOptions();
+        markerOptions.position(latLng);
+        markerOptions.title("Current Position");
+        markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE));
+        mCurrentLocationMarker = mMap.addMarker(markerOptions);
+
         moveMapCameraToCurrentLocation();
     }
 }
