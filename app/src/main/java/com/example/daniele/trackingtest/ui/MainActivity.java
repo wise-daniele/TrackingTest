@@ -1,4 +1,4 @@
-package com.example.daniele.trackingtest;
+package com.example.daniele.trackingtest.ui;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -7,6 +7,9 @@ import android.os.Bundle;
 import android.widget.CompoundButton;
 import android.widget.Switch;
 
+import com.example.daniele.trackingtest.Constants;
+import com.example.daniele.trackingtest.R;
+import com.example.daniele.trackingtest.controller.MainController;
 import com.google.android.gms.maps.SupportMapFragment;
 
 public class MainActivity extends AppCompatActivity{
@@ -31,7 +34,13 @@ public class MainActivity extends AppCompatActivity{
         mSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-
+                if(isChecked){
+                    mMainController.startPathRecording();
+                }
+                else{
+                    //TODO:
+                    mMainController.stopPathRecording();
+                }
             }
         });
     }
@@ -52,11 +61,10 @@ public class MainActivity extends AppCompatActivity{
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch (requestCode) {
-            // Check for the integer request code originally supplied to startResolutionForResult().
             case Constants.REQUEST_CHECK_SETTINGS:
                 switch (resultCode) {
                     case Activity.RESULT_OK:
-                        mMainController.startLocationUpdates();
+                        mMainController.checkLocationSettings();
                         break;
                     case Activity.RESULT_CANCELED:
                         //keep asking for Location Settings

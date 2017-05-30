@@ -1,9 +1,10 @@
-package com.example.daniele.trackingtest;
+package com.example.daniele.trackingtest.controller;
 
 import android.Manifest;
 import android.content.Context;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
@@ -12,6 +13,9 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 
+import com.example.daniele.trackingtest.Constants;
+import com.example.daniele.trackingtest.Path;
+import com.example.daniele.trackingtest.ui.MainActivity;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
@@ -33,6 +37,10 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
+
+import java.util.ArrayList;
 
 /**
  * Created by daniele on 29/05/17.
@@ -52,10 +60,17 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     private Location mCurrentLocation;
     private LocationRequest mLocationRequest;
     private Marker mCurrentLocationMarker;
+    private Path mPath;
+    private boolean mIsLocationUpdateStarted;
+    private boolean mIsPathRecording;
+    private Polyline mLine;
+    private PolylineOptions mLineOptions;
 
     public MainController(MainActivity activity, SupportMapFragment mapFragment){
         mActivity = activity;
         mMapFragment = mapFragment;
+        mIsPathRecording = false;
+        mIsLocationUpdateStarted = false;
         createGoogleApiInstance();
         setupLocationRequest();
         mLocationManager = (LocationManager) mActivity.getSystemService(Context.LOCATION_SERVICE);
@@ -81,13 +96,11 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
 
     public void checkPermissions(){
         if (ActivityCompat.checkSelfPermission(mActivity, Manifest.permission.ACCESS_FINE_LOCATION) !=
-                PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(mActivity, Manifest.permission.ACCESS_COARSE_LOCATION) !=
-                        PackageManager.PERMISSION_GRANTED) {
+                PackageManager.PERMISSION_GRANTED) {
 
             ActivityCompat.requestPermissions(
                     mActivity,
-                    new String[]{Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION},
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     LOCATION_PERMISSIONS
             );
 
@@ -136,9 +149,8 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         switch (requestCode) {
             case LOCATION_PERMISSIONS: {
                 // If request is cancelled, the result arrays are empty.
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED &&
-                        grantResults[1] == PackageManager.PERMISSION_GRANTED) {
-                    getLastLocation();
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    startLocationUpdates();
                 } else {
                     // permission denied, do something (ask for permission again?)
                     checkPermissions();
@@ -146,6 +158,25 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
                 return;
             }
             //other permissions?
+        }
+    }
+
+    public void startPathRecording(){
+        if(!mIsPathRecording){
+            mIsPathRecording = true;
+            mPath = new Path(System.currentTimeMillis() / 1000L);
+            mLineOptions = new PolylineOptions().width(5).color(Color.BLUE).geodesic(true);
+        }
+    }
+
+    public void stopPathRecording(){
+        if(mIsPathRecording){
+            mIsPathRecording = false;
+            mPath.setEndTimestamp(System.currentTimeMillis() / 1000L);
+            mMap.clear();
+            LatLng latLng = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
+            addMarker(latLng);
+            //TODO Save path
         }
     }
 
@@ -161,10 +192,25 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         }
     }
 
-    @SuppressWarnings("MissingPermission")
-    protected void startLocationUpdates() {
-        LocationServices.FusedLocationApi.requestLocationUpdates(
-                mGoogleApiClient, mLocationRequest, this);
+    public void startLocationUpdates() {
+        if (ActivityCompat.checkSelfPermission(mActivity, Manifest.permission.ACCESS_FINE_LOCATION) !=
+                PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(
+                    mActivity,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    LOCATION_PERMISSIONS
+            );
+        }
+        else{
+            if(!mIsLocationUpdateStarted){
+                LocationServices.FusedLocationApi.requestLocationUpdates(
+                        mGoogleApiClient, mLocationRequest, this);
+                mIsLocationUpdateStarted = true;
+            }
+        }
+
+
     }
 
     public void moveMapCameraToCurrentLocation(){
@@ -215,12 +261,27 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         if (mCurrentLocationMarker != null) {
             mCurrentLocationMarker.remove();
         }
+        if(mIsPathRecording){
+            mPath.addPoint(latLng);
+            drawLine(latLng);
+        }
+        else{
+            addMarker(latLng);
+        }
+        moveMapCameraToCurrentLocation();
+    }
+
+    private void drawLine(LatLng latLng){
+        mLineOptions.add(latLng);
+        addMarker(latLng); //add Marker in current position
+        mLine = mMap.addPolyline(mLineOptions); //add Polyline
+    }
+
+    private void addMarker(LatLng latLng){
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(latLng);
         markerOptions.title("Current Position");
         markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE));
         mCurrentLocationMarker = mMap.addMarker(markerOptions);
-
-        moveMapCameraToCurrentLocation();
     }
 }
