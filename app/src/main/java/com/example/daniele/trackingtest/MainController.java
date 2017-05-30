@@ -1,8 +1,11 @@
 package com.example.daniele.trackingtest;
 
 import android.Manifest;
+import android.content.Context;
+import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -11,7 +14,16 @@ import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsResult;
+import com.google.android.gms.location.LocationSettingsStates;
+import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -24,7 +36,7 @@ import com.google.android.gms.maps.model.LatLng;
  */
 
 public class MainController implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener {
+        GoogleApiClient.OnConnectionFailedListener, LocationListener {
 
     public static final String LOG_TAG = MainController.class.getSimpleName();
     public static final int LOCATION_PERMISSIONS = 1;
@@ -33,12 +45,16 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     private GoogleApiClient mGoogleApiClient;
     private SupportMapFragment mMapFragment;
     private GoogleMap mMap;
-    private Location mLastLocation;
+    private LocationManager mLocationManager;
+    private Location mCurrentLocation;
+    LocationRequest mLocationRequest;
 
     public MainController(MainActivity activity, SupportMapFragment mapFragment){
         mActivity = activity;
         mMapFragment = mapFragment;
         createGoogleApiInstance();
+        setupLocationRequest();
+        mLocationManager = (LocationManager) mActivity.getSystemService(Context.LOCATION_SERVICE);
         mMapFragment.getMapAsync(this);
     }
 
@@ -50,6 +66,13 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
                     .addApi(LocationServices.API)
                     .build();
         }
+    }
+
+    public void setupLocationRequest(){
+        mLocationRequest = LocationRequest.create();
+        mLocationRequest.setPriority(Constants.LOCATION_REQUEST_ACCURACY);
+        mLocationRequest.setInterval(Constants.LOCATION_REQUEST_INTERVAL);
+        mLocationRequest.setFastestInterval(Constants.LOCATION_REQUEST_FASTEST_INTERVAL);
     }
 
     public void checkPermissions(){
@@ -69,6 +92,42 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         getLastLocation();
     }
 
+    public void checkLocationSettings(){
+        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
+                .addLocationRequest(mLocationRequest);
+        builder.setAlwaysShow(true);
+
+        PendingResult<LocationSettingsResult> result =
+                LocationServices.SettingsApi.checkLocationSettings(mGoogleApiClient, builder.build());
+        result.setResultCallback(new ResultCallback<LocationSettingsResult>() {
+            @Override
+            public void onResult(LocationSettingsResult result) {
+                final Status status = result.getStatus();
+                final LocationSettingsStates state = result.getLocationSettingsStates();
+                switch (status.getStatusCode()) {
+                    case LocationSettingsStatusCodes.SUCCESS:
+                        // All location settings are satisfied. Initialize location requests here.
+                        startLocationUpdates();
+                        break;
+                    case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
+                        // Location settings are not satisfied. Show a dialog
+                        try {
+                            // Show the dialog by calling startResolutionForResult(),
+                            // and check the result in onActivityResult().
+                            status.startResolutionForResult(mActivity, Constants.REQUEST_CHECK_SETTINGS);
+                        }
+                        catch (IntentSender.SendIntentException e) {
+                        }
+                        break;
+                    case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
+                        // Location settings are not satisfied. However, we have no way
+                        // to fix the settings so we won't show the dialog.
+                        break;
+                }
+            }
+        });
+    }
+
     public void managePermissionResult(int requestCode, String permissions[], int[] grantResults){
         switch (requestCode) {
             case LOCATION_PERMISSIONS: {
@@ -77,29 +136,35 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
                         grantResults[1] == PackageManager.PERMISSION_GRANTED) {
                     getLastLocation();
                 } else {
-                    // permission denied
+                    // permission denied, do something (ask for permission again?)
+                    checkPermissions();
                 }
                 return;
             }
-            //other permission?
+            //other permissions?
         }
     }
 
     @SuppressWarnings("MissingPermission")
     private void getLastLocation(){
-        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(
+        mCurrentLocation = LocationServices.FusedLocationApi.getLastLocation(
                 mGoogleApiClient);
-        if (mLastLocation != null) {
-            moveMapCameraToCurrentLocation(mLastLocation);
-            /*
-            mLatitudeText.setText(String.valueOf(mLastLocation.getLatitude()));
-            mLongitudeText.setText(String.valueOf(mLastLocation.getLongitude()));
-            */
+        if (mCurrentLocation != null) {
+            moveMapCameraToCurrentLocation();
+        }
+        else{
+            Log.d(LOG_TAG, "Can't retrieve last location");
         }
     }
 
-    public void moveMapCameraToCurrentLocation(Location location){
-        LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+    @SuppressWarnings("MissingPermission")
+    protected void startLocationUpdates() {
+        LocationServices.FusedLocationApi.requestLocationUpdates(
+                mGoogleApiClient, mLocationRequest, this);
+    }
+
+    public void moveMapCameraToCurrentLocation(){
+        LatLng latLng = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
         CameraUpdate myCamera = CameraUpdateFactory.newLatLng(latLng);
         CameraUpdate zoom = CameraUpdateFactory.zoomTo(13);
         mMap.moveCamera(myCamera);
@@ -118,14 +183,14 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     public void onMapReady(GoogleMap googleMap) {
         Log.d(LOG_TAG, "onMapReady");
         mMap = googleMap;
-        //moveMapCameraToCurrentLocation();
-        //moveMapCameraToDefaultValues();
-        //mMap.setOnMarkerClickListener(this);
-        //getPois();
+        if(mCurrentLocation != null){
+            moveMapCameraToCurrentLocation();
+        }
     }
 
     @Override
     public void onConnected(@Nullable Bundle bundle) {
+        Log.d(LOG_TAG, "OnConnected");
         checkPermissions();
     }
 
@@ -137,5 +202,11 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
 
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        mCurrentLocation = location;
+        moveMapCameraToCurrentLocation();
     }
 }
