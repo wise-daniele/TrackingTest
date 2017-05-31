@@ -23,7 +23,6 @@ import java.util.List;
 public class JourneysFragment extends Fragment{
 
     public static final String LOG_TAG = JourneysFragment.class.getSimpleName();
-    public static final String FRAGMENT_TAG = "fragment_journeys";
 
     public static JourneysFragment newInstance() {
         JourneysFragment fragment = new JourneysFragment();
@@ -47,7 +46,7 @@ public class JourneysFragment extends Fragment{
         mJourneyList = new ArrayList<>();
         mJourneysAdapter = new JourneysAdapter(getActivity(), mJourneyList);
         mJourneyView.setAdapter(mJourneysAdapter);
-
         return rootView;
     }
+
 }

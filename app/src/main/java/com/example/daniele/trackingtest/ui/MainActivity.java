@@ -2,9 +2,13 @@ package com.example.daniele.trackingtest.ui;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.Switch;
 
@@ -26,21 +30,18 @@ public class MainActivity extends AppCompatActivity{
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        mSwitch = (Switch) findViewById(R.id.switch_button);
         if (findViewById(R.id.main_fragment_container) != null) {
             if (savedInstanceState != null) {
                 return;
             }
             mMapFragment =  SupportMapFragment.newInstance();
-            FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
-            fragmentTransaction.add(R.id.main_fragment_container, mMapFragment);
-            fragmentTransaction.commit();
+            replaceFragment(mMapFragment, Constants.MAP_FRAGMENT_TAG, true);
         }
 
         mMainController = new MainController(this, mMapFragment);
         mMainController.createGoogleApiInstance();
 
-        mSwitch = (Switch) findViewById(R.id.switch_button);
         mSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -53,6 +54,44 @@ public class MainActivity extends AppCompatActivity{
                 }
             }
         });
+    }
+
+    public int replaceFragment(Fragment fragment, String tag, boolean addToBackStack) {
+        FragmentTransaction fragmentTransaction = getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.main_fragment_container, fragment, tag);
+
+        if (addToBackStack) {
+            fragmentTransaction.addToBackStack(null);
+        }
+        if(fragment instanceof SupportMapFragment){
+            mSwitch.setVisibility(View.VISIBLE);
+        }
+        else{
+            mSwitch.setVisibility(View.GONE);
+        }
+        return fragmentTransaction.commit();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+        if (id == R.id.action_list) {
+            Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.main_fragment_container);
+            if(currentFragment instanceof JourneysFragment){
+                return false;
+            }
+            JourneysFragment fragment = JourneysFragment.newInstance();
+            replaceFragment(fragment, Constants.JOURNEYS_FRAGMENT_TAG, true);
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
@@ -96,7 +135,6 @@ public class MainActivity extends AppCompatActivity{
                 break;
         }
     }
-
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
