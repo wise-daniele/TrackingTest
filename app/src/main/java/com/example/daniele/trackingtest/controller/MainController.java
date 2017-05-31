@@ -168,16 +168,15 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     public void startPathRecording(){
         if(!mIsPathRecording){
             mIsPathRecording = true;
-            mCurrentJourney = new Journey(System.currentTimeMillis() / 1000L);
+            mCurrentJourney = new Journey(System.currentTimeMillis());
         }
     }
 
     public void stopPathRecording(){
         if(mIsPathRecording){
             mIsPathRecording = false;
-            mCurrentJourney.setEndTimestamp(System.currentTimeMillis() / 1000L);
+            mCurrentJourney.setEndTimestamp(System.currentTimeMillis());
             mJourneys.add(0, mCurrentJourney);
-            //TODO Save path
         }
     }
 
@@ -191,6 +190,10 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         else{
             Log.d(LOG_TAG, "Can't retrieve last location");
         }
+    }
+
+    public ArrayList<Journey> getJourneys(){
+        return mJourneys;
     }
 
     public void startLocationUpdates() {

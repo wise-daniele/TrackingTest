@@ -42,11 +42,13 @@ public class JourneysFragment extends Fragment{
         mJourneyView = (RecyclerView) rootView.findViewById(R.id.journeys_list);
         mLayoutManager = new LinearLayoutManager(getActivity(), LinearLayoutManager.VERTICAL, false);
         mJourneyView.setLayoutManager(mLayoutManager);
-        //TODO:get journeys' list
-        mJourneyList = new ArrayList<>();
         mJourneysAdapter = new JourneysAdapter(getActivity(), mJourneyList);
         mJourneyView.setAdapter(mJourneysAdapter);
         return rootView;
+    }
+
+    public void setJourneys(ArrayList<Journey> list){
+        mJourneyList = list;
     }
 
 }

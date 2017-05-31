@@ -5,4 +5,10 @@
     <string name="text_tracking">Tracking</string>
     <string name="action_list">Journeys\' List</string>
 
+    <!-- Journeys Fragment -->
+    <string name="text_start">Start:</string>
+    <string name="text_end">End:</string>
+    <string name="text_journey_title">Journey #%d</string>
+
+
 </resources>

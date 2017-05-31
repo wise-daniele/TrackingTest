@@ -18,4 +18,7 @@ public class Constants {
     //Fragmemts Tags
     public static final String MAP_FRAGMENT_TAG = "fragment_map";
     public static final String JOURNEYS_FRAGMENT_TAG = "fragment_journeys";
+
+    //Date Utils
+    public static final String DATE_FORMAT_NOW = "yyyy-MM-dd HH:mm:ss";
 }

@@ -88,6 +88,7 @@ public class MainActivity extends AppCompatActivity{
                 return false;
             }
             JourneysFragment fragment = JourneysFragment.newInstance();
+            fragment.setJourneys(mMainController.getJourneys());
             replaceFragment(fragment, Constants.JOURNEYS_FRAGMENT_TAG, true);
             return true;
         }
