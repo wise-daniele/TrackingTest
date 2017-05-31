@@ -46,8 +46,20 @@ public class MainActivity extends AppCompatActivity{
     }
 
     @Override
-    protected void onStart() {
+    protected void onPause() {
+        super.onPause();
+        mMainController.setLocationUpdateStarted(false);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        //It is possible that the user turns off location settings while the app is in background
         mMainController.checkLocationSettings();
+    }
+
+    @Override
+    protected void onStart() {
         mMainController.connectGoogleApiClient();
         super.onStart();
     }

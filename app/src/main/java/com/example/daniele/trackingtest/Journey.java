@@ -8,13 +8,13 @@ import java.util.ArrayList;
  * Created by daniele on 30/05/17.
  */
 
-public class Path {
+public class Journey {
 
     private ArrayList<LatLng> path;
     private long startTimestamp;
     private long endTimestamp;
 
-    public Path(long start){
+    public Journey(long start){
         path = new ArrayList<>();
         startTimestamp = start;
     }

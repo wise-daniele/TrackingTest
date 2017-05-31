@@ -14,7 +14,7 @@ import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 
 import com.example.daniele.trackingtest.Constants;
-import com.example.daniele.trackingtest.Path;
+import com.example.daniele.trackingtest.Journey;
 import com.example.daniele.trackingtest.ui.MainActivity;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -60,7 +60,8 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     private Location mCurrentLocation;
     private LocationRequest mLocationRequest;
     private Marker mCurrentLocationMarker;
-    private Path mPath;
+    private ArrayList<Journey> mJourneys;
+    private Journey mCurrentJourney;
     private boolean mIsLocationUpdateStarted;
     private boolean mIsPathRecording;
     private Polyline mLine;
@@ -71,6 +72,8 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         mMapFragment = mapFragment;
         mIsPathRecording = false;
         mIsLocationUpdateStarted = false;
+        mJourneys = new ArrayList<>();
+        mLineOptions = new PolylineOptions().width(5).color(Color.BLUE).geodesic(true);
         createGoogleApiInstance();
         setupLocationRequest();
         mLocationManager = (LocationManager) mActivity.getSystemService(Context.LOCATION_SERVICE);
@@ -153,7 +156,8 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
                     startLocationUpdates();
                 } else {
                     // permission denied, do something (ask for permission again?)
-                    checkPermissions();
+                    //this throws a stackoverflow error due to recursion (show dialog?)
+                    //checkPermissions();
                 }
                 return;
             }
@@ -164,18 +168,15 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     public void startPathRecording(){
         if(!mIsPathRecording){
             mIsPathRecording = true;
-            mPath = new Path(System.currentTimeMillis() / 1000L);
-            mLineOptions = new PolylineOptions().width(5).color(Color.BLUE).geodesic(true);
+            mCurrentJourney = new Journey(System.currentTimeMillis() / 1000L);
         }
     }
 
     public void stopPathRecording(){
         if(mIsPathRecording){
             mIsPathRecording = false;
-            mPath.setEndTimestamp(System.currentTimeMillis() / 1000L);
-            mMap.clear();
-            LatLng latLng = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
-            addMarker(latLng);
+            mCurrentJourney.setEndTimestamp(System.currentTimeMillis() / 1000L);
+            mJourneys.add(0, mCurrentJourney);
             //TODO Save path
         }
     }
@@ -193,6 +194,7 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     }
 
     public void startLocationUpdates() {
+        //TODO: check location settings?
         if (ActivityCompat.checkSelfPermission(mActivity, Manifest.permission.ACCESS_FINE_LOCATION) !=
                 PackageManager.PERMISSION_GRANTED) {
 
@@ -206,13 +208,18 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
             if(!mIsLocationUpdateStarted){
                 LocationServices.FusedLocationApi.requestLocationUpdates(
                         mGoogleApiClient, mLocationRequest, this);
-                mIsLocationUpdateStarted = true;
+                setLocationUpdateStarted(true);
             }
         }
-
-
     }
 
+    public void setLocationUpdateStarted(boolean started){
+        mIsLocationUpdateStarted = started;
+    }
+
+    /**
+     * Moves map over users's current location
+     */
     public void moveMapCameraToCurrentLocation(){
         LatLng latLng = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
         CameraUpdate myCamera = CameraUpdateFactory.newLatLng(latLng);
@@ -261,22 +268,28 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         if (mCurrentLocationMarker != null) {
             mCurrentLocationMarker.remove();
         }
+        drawLine(latLng);
         if(mIsPathRecording){
-            mPath.addPoint(latLng);
-            drawLine(latLng);
-        }
-        else{
-            addMarker(latLng);
+            mCurrentJourney.addPoint(latLng);
         }
         moveMapCameraToCurrentLocation();
     }
 
+    /**
+     * Draws line up to current location
+     * @param latLng current user location
+     */
     private void drawLine(LatLng latLng){
         mLineOptions.add(latLng);
-        addMarker(latLng); //add Marker in current position
-        mLine = mMap.addPolyline(mLineOptions); //add Polyline
+        addMarker(latLng);
+        mLine = mMap.addPolyline(mLineOptions);
     }
 
+
+    /**
+     * Adds a marker on map representing the user current location
+     * @param latLng current user location
+     */
     private void addMarker(LatLng latLng){
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(latLng);
