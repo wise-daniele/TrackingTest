@@ -2,6 +2,7 @@ package com.example.daniele.trackingtest.ui;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.widget.CompoundButton;
@@ -25,8 +26,17 @@ public class MainActivity extends AppCompatActivity{
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mMapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
+
+        if (findViewById(R.id.main_fragment_container) != null) {
+            if (savedInstanceState != null) {
+                return;
+            }
+            mMapFragment =  SupportMapFragment.newInstance();
+            FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
+            fragmentTransaction.add(R.id.main_fragment_container, mMapFragment);
+            fragmentTransaction.commit();
+        }
+
         mMainController = new MainController(this, mMapFragment);
         mMainController.createGoogleApiInstance();
 
