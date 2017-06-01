@@ -19,6 +19,12 @@ public class Journey {
         startTimestamp = start;
     }
 
+    public Journey(long start, LatLng latLng){
+        path = new ArrayList<>();
+        startTimestamp = start;
+        addPoint(latLng);
+    }
+
     public ArrayList<LatLng> getPath() {
         return path;
     }
@@ -44,6 +50,6 @@ public class Journey {
     }
 
     public void addPoint(LatLng point){
-        path.add(point);
+        path.add(0, point);
     }
 }

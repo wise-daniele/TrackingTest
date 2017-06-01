@@ -21,10 +21,9 @@ public class Constants {
     //Fragmemts Tags
     public static final String MAP_FRAGMENT_TAG = "fragment_map";
     public static final String JOURNEYS_FRAGMENT_TAG = "fragment_journeys";
+    public static final String MAP_JOURNEY_FRAGMENT_TAG = "fragment_journey_map";
 
     //Date Utils
     public static final String DATE_FORMAT_NOW = "yyyy-MM-dd HH:mm:ss";
 
-    //Broadcast receivers keys
-    public static final String LOCATION_KEY = "location_key";
 }

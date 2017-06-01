@@ -37,10 +37,12 @@ public class JourneysAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     private Context mContext;
     private List<Journey> mList;
+    private OnItemClickListener mListener;
 
-    public JourneysAdapter(Context context, List<Journey> list) {
+    public JourneysAdapter(Context context, List<Journey> list, OnItemClickListener listener) {
         mContext = context;
         mList = list;
+        mListener = listener;
     }
 
     @Override
@@ -59,11 +61,21 @@ public class JourneysAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             String textEnd = Utils.getDateFromTimestamp(journey.getEndTimestamp());
             ((JourneyViewHolder)holder).startDate.setText(textStart);
             ((JourneyViewHolder)holder).endDate.setText(textEnd);
+            ((JourneyViewHolder)holder).myView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    mListener.onItemClick(journey);
+                }
+            });
         }
     }
 
     @Override
     public int getItemCount() {
         return mList.size();
+    }
+
+    public interface OnItemClickListener {
+        void onItemClick(Journey item);
     }
 }

@@ -11,5 +11,7 @@
     <string name="text_end">End:</string>
     <string name="text_journey_title">Journey #%d</string>
 
+    <string name="text_marker_current_position">Current Position</string>
+
 
 </resources>

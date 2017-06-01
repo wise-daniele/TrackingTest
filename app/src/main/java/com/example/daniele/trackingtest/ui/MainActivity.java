@@ -11,8 +11,9 @@ import android.widget.Switch;
 import com.example.daniele.trackingtest.Constants;
 import com.example.daniele.trackingtest.R;
 import com.example.daniele.trackingtest.controller.MainController;
+import com.example.daniele.trackingtest.model.Journey;
 
-public class MainActivity extends AppCompatActivity{
+public class MainActivity extends AppCompatActivity implements JourneysFragment.JourneysFragmentListener {
 
     public static final String LOG_TAG = MainActivity.class.getSimpleName();
 
@@ -29,7 +30,7 @@ public class MainActivity extends AppCompatActivity{
             if (savedInstanceState != null) {
                 return;
             }
-            mMainController.showMapFragment();
+            mMainController.showMapFragment(false);
         }
         mMainController.createGoogleApiInstance();
     }
@@ -101,5 +102,11 @@ public class MainActivity extends AppCompatActivity{
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         mMainController.managePermissionResult(requestCode, permissions, grantResults);
+    }
+
+    @Override
+    public void onItemSelected(Journey journey) {
+        mMainController.showMapFragment(true);
+        mMainController.showJourneyOnDetailMap(journey);
     }
 }

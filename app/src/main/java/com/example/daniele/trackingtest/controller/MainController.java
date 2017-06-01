@@ -23,6 +23,7 @@ import android.widget.Switch;
 
 import com.example.daniele.trackingtest.Constants;
 import com.example.daniele.trackingtest.R;
+import com.example.daniele.trackingtest.Utils;
 import com.example.daniele.trackingtest.model.Journey;
 import com.example.daniele.trackingtest.service.LocationService;
 import com.example.daniele.trackingtest.ui.JourneysFragment;
@@ -65,6 +66,7 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     private MainActivity mActivity;
     private GoogleApiClient mGoogleApiClient;
     private GoogleMap mMap;
+    private GoogleMap mJourneyMap;
     private Intent mLocationServiceIntent;
     private Location mCurrentLocation;
     private LocationRequest mLocationRequest;
@@ -78,6 +80,7 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     private boolean mServiceBounded;
 
     private SupportMapFragment mMapFragment;
+    private SupportMapFragment mMapDetailFragment;
     private Switch mSwitch;
 
     /**
@@ -113,7 +116,7 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         mIsLocationUpdateStarted = false;
         createGoogleApiInstance();
         mJourneys = new ArrayList<>();
-        mLineOptions = new PolylineOptions().width(5).color(Color.BLUE).geodesic(true);
+        mLineOptions = new PolylineOptions().width(6).color(Color.BLUE).geodesic(true);
         setupLocationRequest();
         mMapFragment = SupportMapFragment.newInstance();
         mMapFragment.getMapAsync(this);
@@ -128,22 +131,66 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     }
 
     /**
-     * Adds Map Fragment on main fragment container
+     * @param isJourneyDetail if true the map must show the selected journey detail
      * @return
      */
-    public boolean showMapFragment(){
+    public boolean showMapFragment(boolean isJourneyDetail){
         if(getCurrentMainFragment() instanceof SupportMapFragment){
             return false;
         }
-        if(mMapFragment == null){
-            mMapFragment =  SupportMapFragment.newInstance();
+
+        if(!isJourneyDetail){
+            if(mMapFragment == null){
+                mMapFragment = SupportMapFragment.newInstance();
+            }
+            replaceFragment(
+                    R.id.main_fragment_container,
+                    mMapFragment,
+                    Constants.MAP_FRAGMENT_TAG,
+                    false
+            );
         }
-        replaceFragment(
-                R.id.main_fragment_container,
-                mMapFragment,
-                Constants.MAP_FRAGMENT_TAG, false
-        );
+        else{
+            mMapDetailFragment = SupportMapFragment.newInstance();
+            replaceFragment(
+                    R.id.main_fragment_container,
+                    mMapDetailFragment,
+                    Constants.MAP_JOURNEY_FRAGMENT_TAG,
+                    true
+            );
+        }
         return true;
+    }
+
+    public void showJourneyOnDetailMap(final Journey journey){
+        mMapDetailFragment.getMapAsync(new OnMapReadyCallback() {
+            @Override
+            public void onMapReady(GoogleMap googleMap) {
+                mJourneyMap = googleMap;
+                drawJourneyDetailOnMap(journey);
+            }
+        });
+    }
+
+    private void drawJourneyDetailOnMap(Journey journey){
+        mJourneyMap.clear();
+        moveJourneyMapCameraToLocation(journey.getPath().get(0));
+        String textMarkerStart = mActivity.getString(R.string.text_start) + " " +
+                Utils.getDateFromTimestamp(journey.getStartTimestamp());
+        String textMarkerEnd = mActivity.getString(R.string.text_end) + " " +
+                Utils.getDateFromTimestamp(journey.getEndTimestamp());
+        ArrayList<LatLng> path = journey.getPath();
+        addMarker(
+                path.get(path.size()-1),
+                textMarkerStart,
+                true
+        );
+        addMarker(
+                path.get(0),
+                textMarkerEnd,
+                true
+        );
+        drawLine(journey.getPath());
     }
 
     /**
@@ -276,7 +323,13 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     private void startPathRecording(){
         if(!mIsPathRecording){
             mIsPathRecording = true;
-            mCurrentJourney = new Journey(System.currentTimeMillis());
+            if(mCurrentLocation != null){
+                LatLng latLng = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
+                mCurrentJourney = new Journey(System.currentTimeMillis(), latLng);
+            }
+            else{
+                mCurrentJourney = new Journey(System.currentTimeMillis());
+            }
         }
     }
 
@@ -287,7 +340,10 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         if(mIsPathRecording){
             mIsPathRecording = false;
             mCurrentJourney.setEndTimestamp(System.currentTimeMillis());
-            mJourneys.add(0, mCurrentJourney);
+            //Save jurneys with at least 2 updates
+            if(mCurrentJourney.getPath().size()>1){
+                mJourneys.add(0, mCurrentJourney);
+            }
         }
     }
 
@@ -297,7 +353,12 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
      */
     public boolean clearPath(){
         mMap.clear();
-        addMarker(new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()));
+        mLineOptions = new PolylineOptions().width(6).color(Color.BLUE).geodesic(true);
+        addMarker(
+                new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()),
+                mActivity.getString(R.string.text_marker_current_position),
+                false
+        );
         return true;
     }
 
@@ -331,8 +392,10 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
      */
     public void stopLocationUpdates(){
         Log.d(LOG_TAG, "Stop Location Updates");
-        mActivity.unbindService(mConnection);
-        mActivity.stopService(mLocationServiceIntent);
+        if(mServiceBounded){
+            mActivity.unbindService(mConnection);
+            mActivity.stopService(mLocationServiceIntent);
+        }
     }
 
     private void setLocationUpdateStarted(boolean started){
@@ -351,10 +414,22 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     }
 
     /**
+     * Moves journey ap over location
+     */
+    private void moveJourneyMapCameraToLocation(LatLng latLng){
+        CameraUpdate myCamera = CameraUpdateFactory.newLatLng(latLng);
+        CameraUpdate zoom = CameraUpdateFactory.zoomTo(17);
+        mJourneyMap.moveCamera(myCamera);
+        mJourneyMap.animateCamera(zoom);
+    }
+
+    /**
      * Connects GoogleApiClient
      */
     private void connectGoogleApiClient(){
-        mGoogleApiClient.connect();
+        if(!mGoogleApiClient.isConnected()){
+            mGoogleApiClient.connect();
+        }
     }
 
     /**
@@ -387,6 +462,9 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         else{
             mSwitch.setVisibility(View.GONE);
         }
+        if(getCurrentMainFragment().getTag().equals(Constants.MAP_JOURNEY_FRAGMENT_TAG)){
+            mJourneyMap.clear();
+        }
     }
 
     /**
@@ -401,9 +479,7 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
      * Called when the activity is started
      */
     public void onStart(){
-        if(!mSwitch.isChecked()){
-            connectGoogleApiClient();
-        }
+        connectGoogleApiClient();
     }
 
     /**
@@ -436,23 +512,45 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
      * Draws line up to current location
      * @param latLng current user location
      */
-    private void drawLine(LatLng latLng){
+    private void drawLinePoint(LatLng latLng){
         mLineOptions.add(latLng);
-        addMarker(latLng);
-        mLine = mMap.addPolyline(mLineOptions);
+        mMap.addPolyline(mLineOptions);
     }
 
+    private void drawLine(ArrayList<LatLng> journey){
+        PolylineOptions polylineOptions = new PolylineOptions().width(6).color(Color.BLUE).geodesic(true);
+        for(int i = journey.size()-1; i>=0; i--){
+            LatLng latLng = journey.get(i);
+            polylineOptions.add(latLng);
+            mJourneyMap.addPolyline(polylineOptions);
+        }
+    }
 
     /**
      * Adds a marker on map representing the user current location
-     * @param latLng current user location
+     * @param latLng coordinates of marker
+     * @param title marker title
+     * @param isDetailMap true if the map shows the details of a journey, false if the map
+     *                    shows user's tarcking
      */
-    private void addMarker(LatLng latLng){
+    private void addMarker(LatLng latLng, String title, boolean isDetailMap){
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(latLng);
-        markerOptions.title("Current Position");
-        markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE));
-        mCurrentLocationMarker = mMap.addMarker(markerOptions);
+        markerOptions.title(title);
+        if(!isDetailMap){
+            markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE));
+            mCurrentLocationMarker = mMap.addMarker(markerOptions);
+        }
+        else{
+            if(title.contains(mActivity.getString(R.string.text_start))){
+                markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
+            }
+            else{
+                markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
+            }
+            mJourneyMap.addMarker(markerOptions);
+        }
+
     }
 
     /**
@@ -467,7 +565,12 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         if (mCurrentLocationMarker != null) {
             mCurrentLocationMarker.remove();
         }
-        drawLine(latLng);
+        drawLinePoint(latLng);
+        addMarker(
+                latLng,
+                mActivity.getString(R.string.text_marker_current_position),
+                false
+        );
         if(mIsPathRecording){
             mCurrentJourney.addPoint(latLng);
         }
