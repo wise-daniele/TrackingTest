@@ -3,5 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:context=".ui.MainActivity">
     <item android:id="@+id/action_list" android:title="@string/action_list"
+        android:orderInCategory="100" app:showAsAction="never"/>
+    <item android:id="@+id/action_clear_path" android:title="@string/action_clear_path"
         android:orderInCategory="100" app:showAsAction="never" />
 </menu>

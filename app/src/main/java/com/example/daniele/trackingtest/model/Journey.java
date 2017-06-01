@@ -1,4 +1,4 @@
-package com.example.daniele.trackingtest;
+package com.example.daniele.trackingtest.model;
 
 import com.google.android.gms.maps.model.LatLng;
 

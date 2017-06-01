@@ -9,9 +9,9 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.example.daniele.trackingtest.Journey;
+import com.example.daniele.trackingtest.model.Journey;
 import com.example.daniele.trackingtest.R;
-import com.example.daniele.trackingtest.adapter.JourneysAdapter;
+import com.example.daniele.trackingtest.ui.adapter.JourneysAdapter;
 
 import java.util.ArrayList;
 import java.util.List;

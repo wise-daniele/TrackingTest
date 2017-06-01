@@ -4,6 +4,7 @@
     <!-- Main Activity -->
     <string name="text_tracking">Tracking</string>
     <string name="action_list">Journeys\' List</string>
+    <string name="action_clear_path">Clear Path</string>
 
     <!-- Journeys Fragment -->
     <string name="text_start">Start:</string>

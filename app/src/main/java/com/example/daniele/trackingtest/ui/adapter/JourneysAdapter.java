@@ -1,4 +1,4 @@
-package com.example.daniele.trackingtest.adapter;
+package com.example.daniele.trackingtest.ui.adapter;
 
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
@@ -7,7 +7,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.example.daniele.trackingtest.Journey;
+import com.example.daniele.trackingtest.model.Journey;
 import com.example.daniele.trackingtest.R;
 import com.example.daniele.trackingtest.Utils;
 
@@ -17,7 +17,7 @@ import java.util.List;
  * Created by daniele on 31/05/17.
  */
 
-public class JourneysAdapter extends RecyclerView.Adapter<JourneysAdapter.JourneyViewHolder>  {
+public class JourneysAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>  {
 
     public static class JourneyViewHolder extends RecyclerView.ViewHolder {
 
@@ -51,14 +51,14 @@ public class JourneysAdapter extends RecyclerView.Adapter<JourneysAdapter.Journe
     }
 
     @Override
-    public void onBindViewHolder(JourneyViewHolder holder, int position) {
+    public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
         final Journey journey = mList.get(position);
         if(journey != null) {
-            holder.title.setText(mContext.getString(R.string.text_journey_title, position));
+            ((JourneyViewHolder)holder).title.setText(mContext.getString(R.string.text_journey_title, position));
             String textStart = Utils.getDateFromTimestamp(journey.getStartTimestamp());
             String textEnd = Utils.getDateFromTimestamp(journey.getEndTimestamp());
-            holder.startDate.setText(textStart);
-            holder.endDate.setText(textEnd);
+            ((JourneyViewHolder)holder).startDate.setText(textStart);
+            ((JourneyViewHolder)holder).endDate.setText(textEnd);
         }
     }
 

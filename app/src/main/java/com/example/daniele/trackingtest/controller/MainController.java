@@ -1,27 +1,37 @@
 package com.example.daniele.trackingtest.controller;
 
 import android.Manifest;
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
 import android.content.IntentSender;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
-import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentTransaction;
 import android.util.Log;
+import android.view.View;
+import android.widget.CompoundButton;
+import android.widget.Switch;
 
 import com.example.daniele.trackingtest.Constants;
-import com.example.daniele.trackingtest.Journey;
+import com.example.daniele.trackingtest.R;
+import com.example.daniele.trackingtest.model.Journey;
+import com.example.daniele.trackingtest.service.LocationService;
+import com.example.daniele.trackingtest.ui.JourneysFragment;
 import com.example.daniele.trackingtest.ui.MainActivity;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
-import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
@@ -47,16 +57,15 @@ import java.util.ArrayList;
  */
 
 public class MainController implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener, LocationListener {
+        GoogleApiClient.OnConnectionFailedListener, LocationService.LocationUpdateListener,
+        CompoundButton.OnCheckedChangeListener{
 
     public static final String LOG_TAG = MainController.class.getSimpleName();
-    public static final int LOCATION_PERMISSIONS = 1;
 
     private MainActivity mActivity;
     private GoogleApiClient mGoogleApiClient;
-    private SupportMapFragment mMapFragment;
     private GoogleMap mMap;
-    private LocationManager mLocationManager;
+    private Intent mLocationServiceIntent;
     private Location mCurrentLocation;
     private LocationRequest mLocationRequest;
     private Marker mCurrentLocationMarker;
@@ -66,18 +75,85 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     private boolean mIsPathRecording;
     private Polyline mLine;
     private PolylineOptions mLineOptions;
+    private boolean mServiceBounded;
 
-    public MainController(MainActivity activity, SupportMapFragment mapFragment){
+    private SupportMapFragment mMapFragment;
+    private Switch mSwitch;
+
+    ServiceConnection mConnection = new ServiceConnection() {
+
+        public void onServiceDisconnected(ComponentName name) {
+            Log.d(LOG_TAG, "OnServiceDisconnected");
+            mServiceBounded = false;
+        }
+
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            Log.d(LOG_TAG, "OnSErviceConnected");
+            mServiceBounded = true;
+            LocationService.LocalBinder mLocalBinder = (LocationService.LocalBinder)service;
+            mLocalBinder.registerListener(MainController.this);
+            mLocalBinder.setGoogleApiClient(mGoogleApiClient);
+        }
+    };
+
+    public MainController(MainActivity activity, Switch switchButton){
         mActivity = activity;
-        mMapFragment = mapFragment;
+        mSwitch = switchButton;
+        mSwitch.setOnCheckedChangeListener(this);
         mIsPathRecording = false;
         mIsLocationUpdateStarted = false;
+        createGoogleApiInstance();
         mJourneys = new ArrayList<>();
         mLineOptions = new PolylineOptions().width(5).color(Color.BLUE).geodesic(true);
-        createGoogleApiInstance();
         setupLocationRequest();
-        mLocationManager = (LocationManager) mActivity.getSystemService(Context.LOCATION_SERVICE);
+        mMapFragment = SupportMapFragment.newInstance();
         mMapFragment.getMapAsync(this);
+    }
+
+    public Fragment getCurrentMainFragment(){
+        return mActivity.getSupportFragmentManager().findFragmentById(R.id.main_fragment_container);
+    }
+
+    public boolean showMapFragment(){
+        if(getCurrentMainFragment() instanceof SupportMapFragment){
+            return false;
+        }
+        if(mMapFragment == null){
+            mMapFragment =  SupportMapFragment.newInstance();
+        }
+        replaceFragment(
+                R.id.main_fragment_container,
+                mMapFragment,
+                Constants.MAP_FRAGMENT_TAG, false
+        );
+        return true;
+    }
+
+    public boolean showJourneysFragment(){
+        if(getCurrentMainFragment() instanceof JourneysFragment){
+            return false;
+        }
+        JourneysFragment fragment = JourneysFragment.newInstance();
+        fragment.setJourneys(getJourneys());
+        replaceFragment(
+                R.id.main_fragment_container,
+                fragment,
+                Constants.JOURNEYS_FRAGMENT_TAG,
+                true
+        );
+        mSwitch.setVisibility(View.GONE);
+        return true;
+    }
+
+    private int replaceFragment(int containerId, Fragment fragment, String tag, boolean addToBackStack) {
+        FragmentTransaction fragmentTransaction = mActivity.getSupportFragmentManager()
+                .beginTransaction()
+                .replace(containerId, fragment, tag);
+
+        if (addToBackStack) {
+            fragmentTransaction.addToBackStack(null);
+        }
+        return fragmentTransaction.commit();
     }
 
     public void createGoogleApiInstance() {
@@ -90,26 +166,25 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         }
     }
 
-    public void setupLocationRequest(){
+    private void setupLocationRequest(){
         mLocationRequest = LocationRequest.create();
         mLocationRequest.setPriority(Constants.LOCATION_REQUEST_ACCURACY);
         mLocationRequest.setInterval(Constants.LOCATION_REQUEST_INTERVAL);
         mLocationRequest.setFastestInterval(Constants.LOCATION_REQUEST_FASTEST_INTERVAL);
     }
 
-    public void checkPermissions(){
+    private void checkPermissions(){
         if (ActivityCompat.checkSelfPermission(mActivity, Manifest.permission.ACCESS_FINE_LOCATION) !=
                 PackageManager.PERMISSION_GRANTED) {
 
             ActivityCompat.requestPermissions(
                     mActivity,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    LOCATION_PERMISSIONS
+                    Constants.LOCATION_PERMISSIONS
             );
 
             return;
         }
-        getLastLocation();
     }
 
     public void checkLocationSettings(){
@@ -150,14 +225,13 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
 
     public void managePermissionResult(int requestCode, String permissions[], int[] grantResults){
         switch (requestCode) {
-            case LOCATION_PERMISSIONS: {
+            case Constants.LOCATION_PERMISSIONS: {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     startLocationUpdates();
                 } else {
                     // permission denied, do something (ask for permission again?)
-                    //this throws a stackoverflow error due to recursion (show dialog?)
-                    //checkPermissions();
+                    // No, it throws a stackoverflow error due to recursion
                 }
                 return;
             }
@@ -165,14 +239,14 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         }
     }
 
-    public void startPathRecording(){
+    private void startPathRecording(){
         if(!mIsPathRecording){
             mIsPathRecording = true;
             mCurrentJourney = new Journey(System.currentTimeMillis());
         }
     }
 
-    public void stopPathRecording(){
+    private void stopPathRecording(){
         if(mIsPathRecording){
             mIsPathRecording = false;
             mCurrentJourney.setEndTimestamp(System.currentTimeMillis());
@@ -180,50 +254,50 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         }
     }
 
-    @SuppressWarnings("MissingPermission")
-    private void getLastLocation(){
-        mCurrentLocation = LocationServices.FusedLocationApi.getLastLocation(
-                mGoogleApiClient);
-        if (mCurrentLocation != null) {
-            moveMapCameraToCurrentLocation();
-        }
-        else{
-            Log.d(LOG_TAG, "Can't retrieve last location");
-        }
+    public boolean clearPath(){
+        mMap.clear();
+        addMarker(new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()));
+        return true;
     }
 
     public ArrayList<Journey> getJourneys(){
         return mJourneys;
     }
 
-    public void startLocationUpdates() {
-        //TODO: check location settings?
+    private void startLocationUpdates() {
         if (ActivityCompat.checkSelfPermission(mActivity, Manifest.permission.ACCESS_FINE_LOCATION) !=
                 PackageManager.PERMISSION_GRANTED) {
 
             ActivityCompat.requestPermissions(
                     mActivity,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    LOCATION_PERMISSIONS
+                    Constants.LOCATION_PERMISSIONS
             );
         }
         else{
             if(!mIsLocationUpdateStarted){
-                LocationServices.FusedLocationApi.requestLocationUpdates(
-                        mGoogleApiClient, mLocationRequest, this);
-                setLocationUpdateStarted(true);
+                Log.d(LOG_TAG, "Start Service");
+                mLocationServiceIntent = new Intent(mActivity, LocationService.class);
+                mActivity.bindService(mLocationServiceIntent, mConnection, Context.BIND_AUTO_CREATE);
+                mIsLocationUpdateStarted = true;
             }
         }
     }
 
-    public void setLocationUpdateStarted(boolean started){
+    public void stopLocationUpdates(){
+        Log.d(LOG_TAG, "Stop Location Updates");
+        mActivity.unbindService(mConnection);
+        mActivity.stopService(mLocationServiceIntent);
+    }
+
+    private void setLocationUpdateStarted(boolean started){
         mIsLocationUpdateStarted = started;
     }
 
     /**
      * Moves map over users's current location
      */
-    public void moveMapCameraToCurrentLocation(){
+    private void moveMapCameraToCurrentLocation(){
         LatLng latLng = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
         CameraUpdate myCamera = CameraUpdateFactory.newLatLng(latLng);
         CameraUpdate zoom = CameraUpdateFactory.zoomTo(17);
@@ -231,11 +305,11 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         mMap.animateCamera(zoom);
     }
 
-    public void connectGoogleApiClient(){
+    private void connectGoogleApiClient(){
         mGoogleApiClient.connect();
     }
 
-    public void disconnectGoogleApiClient(){
+    private void disconnectGoogleApiClient(){
         mGoogleApiClient.disconnect();
     }
 
@@ -245,6 +319,35 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         mMap = googleMap;
         if(mCurrentLocation != null){
             moveMapCameraToCurrentLocation();
+        }
+    }
+
+    public void onBackPressed(){
+        if(getCurrentMainFragment().getTag().equals(Constants.MAP_FRAGMENT_TAG)){
+            mSwitch.setVisibility(View.VISIBLE);
+        }
+        else{
+            mSwitch.setVisibility(View.GONE);
+        }
+    }
+
+    public void onResume(){
+        //It is possible that the user turns off location settings while the app is in background
+        checkLocationSettings();
+    }
+
+    public void onStart(){
+        if(!mSwitch.isChecked()){
+            connectGoogleApiClient();
+        }
+    }
+
+    public void onStop(){
+        Log.d(LOG_TAG, "OnStop");
+        if(!mSwitch.isChecked()){
+            stopLocationUpdates();
+            setLocationUpdateStarted(false);
+            disconnectGoogleApiClient();
         }
     }
 
@@ -262,20 +365,6 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
 
-    }
-
-    @Override
-    public void onLocationChanged(Location location) {
-        mCurrentLocation = location;
-        LatLng latLng = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
-        if (mCurrentLocationMarker != null) {
-            mCurrentLocationMarker.remove();
-        }
-        drawLine(latLng);
-        if(mIsPathRecording){
-            mCurrentJourney.addPoint(latLng);
-        }
-        moveMapCameraToCurrentLocation();
     }
 
     /**
@@ -299,5 +388,32 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         markerOptions.title("Current Position");
         markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE));
         mCurrentLocationMarker = mMap.addMarker(markerOptions);
+    }
+
+    @Override
+    public void onLocationUpdate(Location location) {
+        Log.d(LOG_TAG, "onLocationUpdate");
+        mCurrentLocation = location;
+        LatLng latLng = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
+        if (mCurrentLocationMarker != null) {
+            mCurrentLocationMarker.remove();
+        }
+        drawLine(latLng);
+        if(mIsPathRecording){
+            mCurrentJourney.addPoint(latLng);
+        }
+        moveMapCameraToCurrentLocation();
+    }
+
+    @Override
+    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+        if(buttonView.getId() == R.id.switch_button){
+            if(isChecked){
+                startPathRecording();
+            }
+            else{
+                stopPathRecording();
+            }
+        }
     }
 }

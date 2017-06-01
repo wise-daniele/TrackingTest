@@ -2,28 +2,22 @@ package com.example.daniele.trackingtest.ui;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.CompoundButton;
 import android.widget.Switch;
 
 import com.example.daniele.trackingtest.Constants;
 import com.example.daniele.trackingtest.R;
 import com.example.daniele.trackingtest.controller.MainController;
-import com.google.android.gms.maps.SupportMapFragment;
 
 public class MainActivity extends AppCompatActivity{
 
     public static final String LOG_TAG = MainActivity.class.getSimpleName();
 
     private MainController mMainController;
-    private SupportMapFragment mMapFragment;
-
     private Switch mSwitch;
 
     @Override
@@ -31,46 +25,14 @@ public class MainActivity extends AppCompatActivity{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mSwitch = (Switch) findViewById(R.id.switch_button);
+        mMainController = new MainController(this, mSwitch);
         if (findViewById(R.id.main_fragment_container) != null) {
             if (savedInstanceState != null) {
                 return;
             }
-            mMapFragment =  SupportMapFragment.newInstance();
-            replaceFragment(mMapFragment, Constants.MAP_FRAGMENT_TAG, true);
+            mMainController.showMapFragment();
         }
-
-        mMainController = new MainController(this, mMapFragment);
         mMainController.createGoogleApiInstance();
-
-        mSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if(isChecked){
-                    mMainController.startPathRecording();
-                }
-                else{
-                    //TODO:
-                    mMainController.stopPathRecording();
-                }
-            }
-        });
-    }
-
-    public int replaceFragment(Fragment fragment, String tag, boolean addToBackStack) {
-        FragmentTransaction fragmentTransaction = getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.main_fragment_container, fragment, tag);
-
-        if (addToBackStack) {
-            fragmentTransaction.addToBackStack(null);
-        }
-        if(fragment instanceof SupportMapFragment){
-            mSwitch.setVisibility(View.VISIBLE);
-        }
-        else{
-            mSwitch.setVisibility(View.GONE);
-        }
-        return fragmentTransaction.commit();
     }
 
     @Override
@@ -83,40 +45,41 @@ public class MainActivity extends AppCompatActivity{
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
         if (id == R.id.action_list) {
-            Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.main_fragment_container);
-            if(currentFragment instanceof JourneysFragment){
-                return false;
-            }
-            JourneysFragment fragment = JourneysFragment.newInstance();
-            fragment.setJourneys(mMainController.getJourneys());
-            replaceFragment(fragment, Constants.JOURNEYS_FRAGMENT_TAG, true);
-            return true;
+            return mMainController.showJourneysFragment();
+        }
+        if (id == R.id.action_clear_path) {
+            return mMainController.clearPath();
         }
         return super.onOptionsItemSelected(item);
     }
 
     @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        mMainController.onBackPressed();
+    }
+
+    @Override
     protected void onPause() {
         super.onPause();
-        mMainController.setLocationUpdateStarted(false);
+        //mMainController.setLocationUpdateStarted(false);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        //It is possible that the user turns off location settings while the app is in background
-        mMainController.checkLocationSettings();
+        mMainController.onResume();
     }
 
     @Override
     protected void onStart() {
-        mMainController.connectGoogleApiClient();
         super.onStart();
+        mMainController.onStart();
     }
 
     @Override
     protected void onStop() {
-        mMainController.disconnectGoogleApiClient();
+        mMainController.onStop();
         super.onStop();
     }
 
