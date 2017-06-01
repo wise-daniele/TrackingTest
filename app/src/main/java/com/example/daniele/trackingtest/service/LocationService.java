@@ -24,24 +24,15 @@ public class LocationService extends Service implements LocationListener {
     public static final String LOG_TAG = LocationService.class.getSimpleName();
 
     private IBinder mBinder = new LocalBinder();
-
     private GoogleApiClient mGoogleApiClient;
     private LocationRequest mLocationRequest;
     private LocationUpdateListener mListener;
 
-    @SuppressWarnings("MissingPermission")
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
         Log.d(LOG_TAG, "onStartCommand (not called if service is started through bindService)");
         return START_STICKY;
-    }
-
-    public void setupLocationRequest(){
-        mLocationRequest = LocationRequest.create();
-        mLocationRequest.setPriority(Constants.LOCATION_REQUEST_ACCURACY);
-        mLocationRequest.setInterval(Constants.LOCATION_REQUEST_INTERVAL);
-        mLocationRequest.setFastestInterval(Constants.LOCATION_REQUEST_FASTEST_INTERVAL);
     }
 
     @Nullable
@@ -65,7 +56,6 @@ public class LocationService extends Service implements LocationListener {
 
     @Override
     public void onCreate(){
-        setupLocationRequest();
         Log.d(LOG_TAG, "Service onCreate");
         super.onCreate();
     }
@@ -85,12 +75,21 @@ public class LocationService extends Service implements LocationListener {
         mListener.onLocationUpdate(location);
     }
 
-
+    /**
+     * Class used for the client Binder.
+     */
     public class LocalBinder extends Binder {
 
         public void registerListener(LocationUpdateListener listener) {
             Log.d(LOG_TAG, "Register Listener");
             mListener = listener;
+        }
+
+        public void setupLocationRequest(){
+            mLocationRequest = LocationRequest.create();
+            mLocationRequest.setPriority(Constants.LOCATION_REQUEST_ACCURACY);
+            mLocationRequest.setInterval(Constants.LOCATION_REQUEST_INTERVAL);
+            mLocationRequest.setFastestInterval(Constants.LOCATION_REQUEST_FASTEST_INTERVAL);
         }
 
         @SuppressWarnings("MissingPermission")
@@ -100,7 +99,6 @@ public class LocationService extends Service implements LocationListener {
             LocationServices.FusedLocationApi.requestLocationUpdates(
                     mGoogleApiClient, mLocationRequest, LocationService.this);
         }
-
     }
 
     public interface LocationUpdateListener {

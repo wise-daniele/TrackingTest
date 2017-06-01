@@ -6,7 +6,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.Switch;
 
 import com.example.daniele.trackingtest.Constants;
@@ -62,7 +61,6 @@ public class MainActivity extends AppCompatActivity{
     @Override
     protected void onPause() {
         super.onPause();
-        //mMainController.setLocationUpdateStarted(false);
     }
 
     @Override

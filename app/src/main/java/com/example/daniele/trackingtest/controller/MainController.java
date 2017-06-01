@@ -80,6 +80,9 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     private SupportMapFragment mMapFragment;
     private Switch mSwitch;
 
+    /**
+     * Monitors the connection with the service
+     */
     ServiceConnection mConnection = new ServiceConnection() {
 
         public void onServiceDisconnected(ComponentName name) {
@@ -87,11 +90,17 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
             mServiceBounded = false;
         }
 
+        /**
+         * Initialize the objects needed to get location updates on the service
+         * @param name
+         * @param service
+         */
         public void onServiceConnected(ComponentName name, IBinder service) {
-            Log.d(LOG_TAG, "OnSErviceConnected");
+            Log.d(LOG_TAG, "OnServiceConnected");
             mServiceBounded = true;
             LocationService.LocalBinder mLocalBinder = (LocationService.LocalBinder)service;
             mLocalBinder.registerListener(MainController.this);
+            mLocalBinder.setupLocationRequest();
             mLocalBinder.setGoogleApiClient(mGoogleApiClient);
         }
     };
@@ -110,10 +119,18 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         mMapFragment.getMapAsync(this);
     }
 
+    /**
+     * Gets current fragment added in the main fragment container
+     * @return
+     */
     public Fragment getCurrentMainFragment(){
         return mActivity.getSupportFragmentManager().findFragmentById(R.id.main_fragment_container);
     }
 
+    /**
+     * Adds Map Fragment on main fragment container
+     * @return
+     */
     public boolean showMapFragment(){
         if(getCurrentMainFragment() instanceof SupportMapFragment){
             return false;
@@ -129,12 +146,16 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         return true;
     }
 
+    /**
+     * Adds Journeys' List Fragment on main fragment container
+     * @return
+     */
     public boolean showJourneysFragment(){
         if(getCurrentMainFragment() instanceof JourneysFragment){
             return false;
         }
         JourneysFragment fragment = JourneysFragment.newInstance();
-        fragment.setJourneys(getJourneys());
+        fragment.setJourneys(mJourneys);
         replaceFragment(
                 R.id.main_fragment_container,
                 fragment,
@@ -145,6 +166,14 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         return true;
     }
 
+    /**
+     * Replaces the fragment within a container
+     * @param containerId Id of the container of the fragment that will be replaced
+     * @param fragment Fragment to add in the container
+     * @param tag tag relative to the fragment
+     * @param addToBackStack true if the we want to maintain the current fragment in the stack
+     * @return
+     */
     private int replaceFragment(int containerId, Fragment fragment, String tag, boolean addToBackStack) {
         FragmentTransaction fragmentTransaction = mActivity.getSupportFragmentManager()
                 .beginTransaction()
@@ -156,6 +185,9 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         return fragmentTransaction.commit();
     }
 
+    /**
+     * Creates GoogleApiClient with the Location Service API
+     */
     public void createGoogleApiInstance() {
         if (mGoogleApiClient == null) {
             mGoogleApiClient = new GoogleApiClient.Builder(mActivity)
@@ -166,6 +198,9 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         }
     }
 
+    /**
+     * Sets the parameters for the location request
+     */
     private void setupLocationRequest(){
         mLocationRequest = LocationRequest.create();
         mLocationRequest.setPriority(Constants.LOCATION_REQUEST_ACCURACY);
@@ -173,25 +208,15 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         mLocationRequest.setFastestInterval(Constants.LOCATION_REQUEST_FASTEST_INTERVAL);
     }
 
-    private void checkPermissions(){
-        if (ActivityCompat.checkSelfPermission(mActivity, Manifest.permission.ACCESS_FINE_LOCATION) !=
-                PackageManager.PERMISSION_GRANTED) {
-
-            ActivityCompat.requestPermissions(
-                    mActivity,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    Constants.LOCATION_PERMISSIONS
-            );
-
-            return;
-        }
-    }
-
+    /**
+     * Check the status of location settings. If they are satisfied the method that starts
+     * location update service is called; if they're not active it prompts the user to activate them
+     */
     public void checkLocationSettings(){
         LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
                 .addLocationRequest(mLocationRequest);
         builder.setAlwaysShow(true);
-
+        //Check whether the current location settings are satisfied
         PendingResult<LocationSettingsResult> result =
                 LocationServices.SettingsApi.checkLocationSettings(mGoogleApiClient, builder.build());
         result.setResultCallback(new ResultCallback<LocationSettingsResult>() {
@@ -223,6 +248,12 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         });
     }
 
+    /**
+     * Follows the callback on permission results on activity
+     * @param requestCode
+     * @param permissions
+     * @param grantResults
+     */
     public void managePermissionResult(int requestCode, String permissions[], int[] grantResults){
         switch (requestCode) {
             case Constants.LOCATION_PERMISSIONS: {
@@ -239,6 +270,9 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         }
     }
 
+    /**
+     * Starts journey recording
+     */
     private void startPathRecording(){
         if(!mIsPathRecording){
             mIsPathRecording = true;
@@ -246,6 +280,9 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         }
     }
 
+    /**
+     * Stops journey recording and save the journey in the list
+     */
     private void stopPathRecording(){
         if(mIsPathRecording){
             mIsPathRecording = false;
@@ -254,16 +291,20 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         }
     }
 
+    /**
+     * Clear path drawn on map
+     * @return
+     */
     public boolean clearPath(){
         mMap.clear();
         addMarker(new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()));
         return true;
     }
 
-    public ArrayList<Journey> getJourneys(){
-        return mJourneys;
-    }
-
+    /**
+     * Starts location update service. Before starting the service it checks whether location
+     * permissions are granted. If not, it prompts the user to enable them
+     */
     private void startLocationUpdates() {
         if (ActivityCompat.checkSelfPermission(mActivity, Manifest.permission.ACCESS_FINE_LOCATION) !=
                 PackageManager.PERMISSION_GRANTED) {
@@ -284,6 +325,10 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         }
     }
 
+    /**
+     * Called when the activity goes in the background and tracking is off.
+     * This stops location update service and allows to reduce battery consumption
+     */
     public void stopLocationUpdates(){
         Log.d(LOG_TAG, "Stop Location Updates");
         mActivity.unbindService(mConnection);
@@ -305,14 +350,24 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         mMap.animateCamera(zoom);
     }
 
+    /**
+     * Connects GoogleApiClient
+     */
     private void connectGoogleApiClient(){
         mGoogleApiClient.connect();
     }
 
+    /**
+     * Disconnects GoogleApiClient
+     */
     private void disconnectGoogleApiClient(){
         mGoogleApiClient.disconnect();
     }
 
+    /**
+     * Callback that ensures that map is ready
+     * @param googleMap
+     */
     @Override
     public void onMapReady(GoogleMap googleMap) {
         Log.d(LOG_TAG, "onMapReady");
@@ -322,6 +377,9 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         }
     }
 
+    /**
+     * Called by onBackPressed on Activity
+     */
     public void onBackPressed(){
         if(getCurrentMainFragment().getTag().equals(Constants.MAP_FRAGMENT_TAG)){
             mSwitch.setVisibility(View.VISIBLE);
@@ -331,17 +389,26 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         }
     }
 
+    /**
+     * Called when the activity is resumed. Calls checkLocationSettings because it is possible
+     * that the user turns off location settings while the app is in the background
+     */
     public void onResume(){
-        //It is possible that the user turns off location settings while the app is in background
         checkLocationSettings();
     }
 
+    /**
+     * Called when the activity is started
+     */
     public void onStart(){
         if(!mSwitch.isChecked()){
             connectGoogleApiClient();
         }
     }
 
+    /**
+     * Called when the activity is stopped
+     */
     public void onStop(){
         Log.d(LOG_TAG, "OnStop");
         if(!mSwitch.isChecked()){
@@ -354,17 +421,15 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     @Override
     public void onConnected(@Nullable Bundle bundle) {
         Log.d(LOG_TAG, "OnConnected");
-        checkPermissions();
+        startLocationUpdates();
     }
 
     @Override
     public void onConnectionSuspended(int i) {
-
     }
 
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-
     }
 
     /**
@@ -390,6 +455,10 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         mCurrentLocationMarker = mMap.addMarker(markerOptions);
     }
 
+    /**
+     * Called periodically by LocationService as soon as a new location is available
+     * @param location user current location
+     */
     @Override
     public void onLocationUpdate(Location location) {
         Log.d(LOG_TAG, "onLocationUpdate");
@@ -405,6 +474,11 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         moveMapCameraToCurrentLocation();
     }
 
+    /**
+     * Listener on switch buttons
+     * @param buttonView
+     * @param isChecked
+     */
     @Override
     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
         if(buttonView.getId() == R.id.switch_button){
