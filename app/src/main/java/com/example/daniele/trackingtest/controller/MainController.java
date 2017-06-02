@@ -16,6 +16,7 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
+import android.util.Log;
 import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.Switch;
@@ -489,6 +490,11 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         mMap.addPolyline(mLineOptions);
     }
 
+    /**
+     * Draws a line representing the path selected and shows 2 markers denoting the beginning and the
+     * end of the journey
+     * @param journey selected journey
+     */
     private void drawLine(Journey journey){
         ArrayList<LatLng> path = journey.getPathLatLng();
         PolylineOptions polylineOptions = new PolylineOptions().width(6).color(Color.BLUE).geodesic(true);
@@ -527,6 +533,12 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         moveJourneyMapCameraToLocation(latLngbounds);
     }
 
+    /**
+     * Computes the distance between two latlng points
+     * @param pointA
+     * @param pointB
+     * @return
+     */
     private float computeDistance(LatLng pointA, LatLng pointB){
         Location locA = new Location("");
         locA.setLatitude(pointA.latitude);
