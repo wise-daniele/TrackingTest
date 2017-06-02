@@ -172,22 +172,7 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
 
     private void drawJourneyDetailOnMap(Journey journey){
         mJourneyMap.clear();
-        String textMarkerStart = mActivity.getString(R.string.text_start) + " " +
-                Utils.getDateFromTimestamp(journey.getStartTimestamp());
-        String textMarkerEnd = mActivity.getString(R.string.text_end) + " " +
-                Utils.getDateFromTimestamp(journey.getEndTimestamp());
-        ArrayList<LatLng> path = journey.getPathLatLng();
-        addMarker(
-                path.get(path.size()-1),
-                textMarkerStart,
-                true
-        );
-        addMarker(
-                path.get(0),
-                textMarkerEnd,
-                true
-        );
-        drawLine(journey.getPathLatLng());
+        drawLine(journey);
     }
 
     /**
@@ -350,6 +335,7 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         addMarker(
                 new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()),
                 mActivity.getString(R.string.text_marker_current_position),
+                null,
                 false
         );
         return true;
@@ -503,17 +489,52 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         mMap.addPolyline(mLineOptions);
     }
 
-    private void drawLine(ArrayList<LatLng> journey){
+    private void drawLine(Journey journey){
+        ArrayList<LatLng> path = journey.getPathLatLng();
         PolylineOptions polylineOptions = new PolylineOptions().width(6).color(Color.BLUE).geodesic(true);
         LatLngBounds.Builder bounds = new LatLngBounds.Builder();
-        for(int i = journey.size()-1; i>=0; i--){
-            LatLng latLng = journey.get(i);
-            bounds.include(latLng);
-            polylineOptions.add(latLng);
-            mJourneyMap.addPolyline(polylineOptions);
+        LatLng latestPoint = path.get(0);
+        float distance = 0;
+        for(int i = path.size()-1; i>=0; i--){
+            LatLng currentPoint = path.get(i);
+            bounds.include(currentPoint);
+            polylineOptions.add(currentPoint);
+            float currentDistance = computeDistance(latestPoint, currentPoint);
+            distance = distance + currentDistance;
+            latestPoint = currentPoint;
         }
+        int intDistance = (int)distance;
+        mJourneyMap.addPolyline(polylineOptions);
         LatLngBounds latLngbounds = bounds.build();
+        String textMarkerStart = mActivity.getString(R.string.text_start) + " " +
+                Utils.getDateFromTimestamp(journey.getStartTimestamp());
+        String textMarkerEnd = mActivity.getString(R.string.text_end) + " " +
+                Utils.getDateFromTimestamp(journey.getEndTimestamp());
+        String textMarkerDistance = mActivity.getString(R.string.text_path_distance) + " " +
+                intDistance + " meters";
+        addMarker(
+                path.get(path.size()-1),
+                textMarkerStart,
+                textMarkerDistance,
+                true
+        );
+        addMarker(
+                path.get(0),
+                textMarkerEnd,
+                textMarkerDistance,
+                true
+        );
         moveJourneyMapCameraToLocation(latLngbounds);
+    }
+
+    private float computeDistance(LatLng pointA, LatLng pointB){
+        Location locA = new Location("");
+        locA.setLatitude(pointA.latitude);
+        locA.setLongitude(pointA.longitude);
+        Location locB = new Location("");
+        locB.setLatitude(pointB.latitude);
+        locB.setLongitude(pointB.longitude);
+        return locA.distanceTo(locB);
     }
 
     /**
@@ -523,9 +544,12 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
      * @param isDetailMap true if the map shows the details of a journey, false if the map
      *                    shows user's tarcking
      */
-    private void addMarker(LatLng latLng, String title, boolean isDetailMap){
+    private void addMarker(LatLng latLng, String title, String snippet, boolean isDetailMap){
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(latLng);
+        if(snippet != null){
+            markerOptions.snippet(snippet);
+        }
         markerOptions.title(title);
         if(!isDetailMap){
             markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE));
@@ -558,6 +582,7 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         addMarker(
                 latLng,
                 mActivity.getString(R.string.text_marker_current_position),
+                null,
                 false
         );
         if(mIsPathRecording){
