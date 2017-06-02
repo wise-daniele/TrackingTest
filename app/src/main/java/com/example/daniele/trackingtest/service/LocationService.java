@@ -6,7 +6,6 @@ import android.location.Location;
 import android.os.Binder;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
-import android.util.Log;
 
 import com.example.daniele.trackingtest.Constants;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -28,41 +27,39 @@ public class LocationService extends Service implements LocationListener {
     private LocationRequest mLocationRequest;
     private LocationUpdateListener mListener;
 
+    /**
+     * Called when the service is started.
+     * The service is not called if started through bindService
+     */
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
-        Log.d(LOG_TAG, "onStartCommand (not called if service is started through bindService)");
         return START_STICKY;
     }
 
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        Log.d(LOG_TAG, "onBind");
         return mBinder;
     }
 
     @Override
     public boolean onUnbind(Intent intent) {
-        Log.d(LOG_TAG, "onUnbind");
         return super.onUnbind(intent);
     }
 
     @Override
     public void onRebind(Intent intent) {
-        Log.d(LOG_TAG, "onRebind");
         super.onRebind(intent);
     }
 
     @Override
     public void onCreate(){
-        Log.d(LOG_TAG, "Service onCreate");
         super.onCreate();
     }
 
     @Override
     public void onDestroy(){
-        Log.d(LOG_TAG, "Service onDestroy");
         if(mGoogleApiClient != null && mGoogleApiClient.isConnected()){
             LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
         }
@@ -71,7 +68,6 @@ public class LocationService extends Service implements LocationListener {
 
     @Override
     public void onLocationChanged(Location location) {
-        Log.d(LOG_TAG, "Location Update");
         mListener.onLocationUpdate(location);
     }
 
@@ -80,8 +76,11 @@ public class LocationService extends Service implements LocationListener {
      */
     public class LocalBinder extends Binder {
 
+        /**
+         * Registener the listener in order to listen to location updates
+         * @param listener location updates listener
+         */
         public void registerListener(LocationUpdateListener listener) {
-            Log.d(LOG_TAG, "Register Listener");
             mListener = listener;
         }
 
@@ -94,7 +93,6 @@ public class LocationService extends Service implements LocationListener {
 
         @SuppressWarnings("MissingPermission")
         public void setGoogleApiClient(GoogleApiClient client) {
-            Log.d(LOG_TAG, "Set up GoogleApiClient");
             mGoogleApiClient = client;
             LocationServices.FusedLocationApi.requestLocationUpdates(
                     mGoogleApiClient, mLocationRequest, LocationService.this);
