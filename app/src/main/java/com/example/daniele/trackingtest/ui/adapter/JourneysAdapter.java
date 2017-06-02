@@ -57,7 +57,7 @@ public class JourneysAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
         final Journey journey = mList.getJourneys().get(position);
         if(journey != null) {
-            ((JourneyViewHolder)holder).title.setText(mContext.getString(R.string.text_journey_title, position));
+            ((JourneyViewHolder)holder).title.setText(mContext.getString(R.string.text_journey_title, position + 1));
             String textStart = Utils.getDateFromTimestamp(journey.getStartTimestamp());
             String textEnd = Utils.getDateFromTimestamp(journey.getEndTimestamp());
             ((JourneyViewHolder)holder).startDate.setText(textStart);

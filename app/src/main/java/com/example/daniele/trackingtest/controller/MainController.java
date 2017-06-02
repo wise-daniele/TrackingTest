@@ -46,6 +46,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
@@ -171,7 +172,6 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
 
     private void drawJourneyDetailOnMap(Journey journey){
         mJourneyMap.clear();
-        moveJourneyMapCameraToLocation(journey.getPathLatLng().get(0));
         String textMarkerStart = mActivity.getString(R.string.text_start) + " " +
                 Utils.getDateFromTimestamp(journey.getStartTimestamp());
         String textMarkerEnd = mActivity.getString(R.string.text_end) + " " +
@@ -407,11 +407,9 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     /**
      * Moves journey ap over location
      */
-    private void moveJourneyMapCameraToLocation(LatLng latLng){
-        CameraUpdate myCamera = CameraUpdateFactory.newLatLng(latLng);
-        CameraUpdate zoom = CameraUpdateFactory.zoomTo(17);
-        mJourneyMap.moveCamera(myCamera);
-        mJourneyMap.animateCamera(zoom);
+    private void moveJourneyMapCameraToLocation(LatLngBounds bounds){
+        CameraUpdate myCamera = CameraUpdateFactory.newLatLngBounds(bounds, 20);
+        mJourneyMap.animateCamera(myCamera);
     }
 
     /**
@@ -507,11 +505,15 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
 
     private void drawLine(ArrayList<LatLng> journey){
         PolylineOptions polylineOptions = new PolylineOptions().width(6).color(Color.BLUE).geodesic(true);
+        LatLngBounds.Builder bounds = new LatLngBounds.Builder();
         for(int i = journey.size()-1; i>=0; i--){
             LatLng latLng = journey.get(i);
+            bounds.include(latLng);
             polylineOptions.add(latLng);
             mJourneyMap.addPolyline(polylineOptions);
         }
+        LatLngBounds latLngbounds = bounds.build();
+        moveJourneyMapCameraToLocation(latLngbounds);
     }
 
     /**
