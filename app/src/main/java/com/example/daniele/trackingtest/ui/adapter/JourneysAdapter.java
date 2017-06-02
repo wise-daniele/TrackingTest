@@ -10,6 +10,7 @@ import android.widget.TextView;
 import com.example.daniele.trackingtest.model.Journey;
 import com.example.daniele.trackingtest.R;
 import com.example.daniele.trackingtest.Utils;
+import com.example.daniele.trackingtest.model.Journeys;
 
 import java.util.List;
 
@@ -36,10 +37,10 @@ public class JourneysAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     }
 
     private Context mContext;
-    private List<Journey> mList;
+    private Journeys mList;
     private OnItemClickListener mListener;
 
-    public JourneysAdapter(Context context, List<Journey> list, OnItemClickListener listener) {
+    public JourneysAdapter(Context context, Journeys list, OnItemClickListener listener) {
         mContext = context;
         mList = list;
         mListener = listener;
@@ -54,7 +55,7 @@ public class JourneysAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     @Override
     public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
-        final Journey journey = mList.get(position);
+        final Journey journey = mList.getJourneys().get(position);
         if(journey != null) {
             ((JourneyViewHolder)holder).title.setText(mContext.getString(R.string.text_journey_title, position));
             String textStart = Utils.getDateFromTimestamp(journey.getStartTimestamp());
@@ -72,7 +73,7 @@ public class JourneysAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     @Override
     public int getItemCount() {
-        return mList.size();
+        return mList.getJourneys().size();
     }
 
     public interface OnItemClickListener {

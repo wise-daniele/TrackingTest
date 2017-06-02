@@ -12,6 +12,7 @@ import android.view.ViewGroup;
 
 import com.example.daniele.trackingtest.model.Journey;
 import com.example.daniele.trackingtest.R;
+import com.example.daniele.trackingtest.model.Journeys;
 import com.example.daniele.trackingtest.ui.adapter.JourneysAdapter;
 
 import java.util.ArrayList;
@@ -31,7 +32,7 @@ public class JourneysFragment extends Fragment{
     }
 
     private RecyclerView mJourneyView;
-    private List<Journey> mJourneyList;
+    private Journeys mJourneyList;
     private JourneysAdapter mJourneysAdapter;
     private LinearLayoutManager mLayoutManager;
     private JourneysFragmentListener mListener;
@@ -55,7 +56,7 @@ public class JourneysFragment extends Fragment{
         return rootView;
     }
 
-    public void setJourneys(ArrayList<Journey> list){
+    public void setJourneys(Journeys list){
         mJourneyList = list;
     }
 

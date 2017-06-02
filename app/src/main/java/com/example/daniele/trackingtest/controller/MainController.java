@@ -25,6 +25,7 @@ import com.example.daniele.trackingtest.Constants;
 import com.example.daniele.trackingtest.R;
 import com.example.daniele.trackingtest.Utils;
 import com.example.daniele.trackingtest.model.Journey;
+import com.example.daniele.trackingtest.model.Journeys;
 import com.example.daniele.trackingtest.service.LocationService;
 import com.example.daniele.trackingtest.ui.JourneysFragment;
 import com.example.daniele.trackingtest.ui.MainActivity;
@@ -71,7 +72,7 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
     private Location mCurrentLocation;
     private LocationRequest mLocationRequest;
     private Marker mCurrentLocationMarker;
-    private ArrayList<Journey> mJourneys;
+    private Journeys mJourneys;
     private Journey mCurrentJourney;
     private boolean mIsLocationUpdateStarted;
     private boolean mIsPathRecording;
@@ -115,7 +116,11 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         mIsPathRecording = false;
         mIsLocationUpdateStarted = false;
         createGoogleApiInstance();
-        mJourneys = new ArrayList<>();
+        mJourneys = Utils.getJourneys(mActivity);
+        if(mJourneys == null){
+            mJourneys = new Journeys();
+        }
+        //mJourneys = new ArrayList<>();
         mLineOptions = new PolylineOptions().width(6).color(Color.BLUE).geodesic(true);
         setupLocationRequest();
         mMapFragment = SupportMapFragment.newInstance();
@@ -174,12 +179,12 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
 
     private void drawJourneyDetailOnMap(Journey journey){
         mJourneyMap.clear();
-        moveJourneyMapCameraToLocation(journey.getPath().get(0));
+        moveJourneyMapCameraToLocation(journey.getPathLatLng().get(0));
         String textMarkerStart = mActivity.getString(R.string.text_start) + " " +
                 Utils.getDateFromTimestamp(journey.getStartTimestamp());
         String textMarkerEnd = mActivity.getString(R.string.text_end) + " " +
                 Utils.getDateFromTimestamp(journey.getEndTimestamp());
-        ArrayList<LatLng> path = journey.getPath();
+        ArrayList<LatLng> path = journey.getPathLatLng();
         addMarker(
                 path.get(path.size()-1),
                 textMarkerStart,
@@ -190,7 +195,7 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
                 textMarkerEnd,
                 true
         );
-        drawLine(journey.getPath());
+        drawLine(journey.getPathLatLng());
     }
 
     /**
@@ -492,6 +497,7 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
             setLocationUpdateStarted(false);
             disconnectGoogleApiClient();
         }
+        Utils.setJourneys(mActivity, mJourneys);
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.example.daniele.trackingtest.model;
 
 import com.google.android.gms.maps.model.LatLng;
+import com.google.gson.annotations.SerializedName;
 
 import java.util.ArrayList;
 
@@ -10,8 +11,11 @@ import java.util.ArrayList;
 
 public class Journey {
 
-    private ArrayList<LatLng> path;
+    @SerializedName("path")
+    private ArrayList<Coordinates> path;
+    @SerializedName("start")
     private long startTimestamp;
+    @SerializedName("end")
     private long endTimestamp;
 
     public Journey(long start){
@@ -25,11 +29,19 @@ public class Journey {
         addPoint(latLng);
     }
 
-    public ArrayList<LatLng> getPath() {
+    public ArrayList<Coordinates> getPath() {
         return path;
     }
 
-    public void setPath(ArrayList<LatLng> path) {
+    public ArrayList<LatLng> getPathLatLng() {
+        ArrayList<LatLng> pathLatLng = new ArrayList<>();
+        for(int i = 0; i<path.size(); i++){
+            pathLatLng.add(i, new LatLng(path.get(i).getLat(), path.get(i).getLng()));
+        }
+        return pathLatLng;
+    }
+
+    public void setPath(ArrayList<Coordinates> path) {
         this.path = path;
     }
 
@@ -50,6 +62,11 @@ public class Journey {
     }
 
     public void addPoint(LatLng point){
+
+        path.add(0, new Coordinates(point.latitude, point.longitude));
+    }
+
+    public void addPoint(Coordinates point){
         path.add(0, point);
     }
 }
