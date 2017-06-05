@@ -2,7 +2,11 @@ package com.example.daniele.trackingtest;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.location.Location;
+import android.util.Log;
+
 import com.example.daniele.trackingtest.model.Journeys;
+import com.google.android.gms.maps.model.LatLng;
 import com.google.gson.Gson;
 
 import java.text.SimpleDateFormat;
@@ -54,5 +58,31 @@ public class Utils {
         mydate.setTimeInMillis(timestamp);
         SimpleDateFormat sdf = new SimpleDateFormat(Constants.DATE_FORMAT_NOW, Locale.getDefault());
         return sdf.format(mydate.getTime());
+    }
+
+    /**
+     * Computes the distance between two latlng points
+     * @return
+     */
+    public static float computeDistance(LatLng pointA, LatLng pointB){
+        Location locA = new Location("");
+        locA.setLatitude(pointA.latitude);
+        locA.setLongitude(pointA.longitude);
+        Location locB = new Location("");
+        locB.setLatitude(pointB.latitude);
+        locB.setLongitude(pointB.longitude);
+        return locA.distanceTo(locB);
+    }
+
+    /**
+     * Computes the average speed of the journey
+     * @param space Space covered (in meters)
+     * @param timeDelta Time elapsed (in milliseconds)
+     * @return The average speed in Km/h
+     */
+    public static float computeAvgSpeed(int space, long timeDelta){
+        space = space / 1000;
+        float time = (timeDelta / (float)1000) / ((float)(60 * 60));
+        return ((float)space)/time;
     }
 }

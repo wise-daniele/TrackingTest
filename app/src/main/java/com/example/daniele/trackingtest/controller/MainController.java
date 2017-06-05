@@ -505,11 +505,13 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
             LatLng currentPoint = path.get(i);
             bounds.include(currentPoint);
             polylineOptions.add(currentPoint);
-            float currentDistance = computeDistance(latestPoint, currentPoint);
+            float currentDistance = Utils.computeDistance(latestPoint, currentPoint);
             distance = distance + currentDistance;
             latestPoint = currentPoint;
         }
         int intDistance = (int)distance;
+        long journeyTimeDelta = journey.getEndTimestamp() - journey.getStartTimestamp();
+        float avgSpeed = Utils.computeAvgSpeed(intDistance, journeyTimeDelta);
         mJourneyMap.addPolyline(polylineOptions);
         LatLngBounds latLngbounds = bounds.build();
         String textMarkerStart = mActivity.getString(R.string.text_start) + " " +
@@ -531,22 +533,6 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
                 true
         );
         moveJourneyMapCameraToLocation(latLngbounds);
-    }
-
-    /**
-     * Computes the distance between two latlng points
-     * @param pointA
-     * @param pointB
-     * @return
-     */
-    private float computeDistance(LatLng pointA, LatLng pointB){
-        Location locA = new Location("");
-        locA.setLatitude(pointA.latitude);
-        locA.setLongitude(pointA.longitude);
-        Location locB = new Location("");
-        locB.setLatitude(pointB.latitude);
-        locB.setLongitude(pointB.longitude);
-        return locA.distanceTo(locB);
     }
 
     /**
