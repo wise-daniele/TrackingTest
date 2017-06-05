@@ -16,14 +16,14 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
-import android.util.Log;
 import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.Switch;
 
-import com.example.daniele.trackingtest.Constants;
+import com.example.daniele.trackingtest.utils.Constants;
+import com.example.daniele.trackingtest.utils.CustomInfoWindowAdapter;
 import com.example.daniele.trackingtest.R;
-import com.example.daniele.trackingtest.Utils;
+import com.example.daniele.trackingtest.utils.Utils;
 import com.example.daniele.trackingtest.model.Journey;
 import com.example.daniele.trackingtest.model.Journeys;
 import com.example.daniele.trackingtest.service.LocationService;
@@ -93,7 +93,7 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         }
 
         /**
-         * Initialize the objects needed to get location updates on the service
+         * Initialize the objects needed to get location updates from the service
          */
         public void onServiceConnected(ComponentName name, IBinder service) {
             mServiceBounded = true;
@@ -336,7 +336,6 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         addMarker(
                 new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()),
                 mActivity.getString(R.string.text_marker_current_position),
-                null,
                 false
         );
         return true;
@@ -395,7 +394,10 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
      * Moves journey ap over location
      */
     private void moveJourneyMapCameraToLocation(LatLngBounds bounds){
-        CameraUpdate myCamera = CameraUpdateFactory.newLatLngBounds(bounds, 20);
+        CameraUpdate myCamera = CameraUpdateFactory.newLatLngBounds(
+                bounds,
+                (int)mActivity.getResources().getDimension(R.dimen.journey_margin_map)
+        );
         mJourneyMap.animateCamera(myCamera);
     }
 
@@ -520,16 +522,15 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
                 Utils.getDateFromTimestamp(journey.getEndTimestamp());
         String textMarkerDistance = mActivity.getString(R.string.text_path_distance) + " " +
                 intDistance + " meters";
+        mJourneyMap.setInfoWindowAdapter(new CustomInfoWindowAdapter(mActivity, journey));
         addMarker(
                 path.get(path.size()-1),
                 textMarkerStart,
-                textMarkerDistance,
                 true
         );
         addMarker(
                 path.get(0),
                 textMarkerEnd,
-                textMarkerDistance,
                 true
         );
         moveJourneyMapCameraToLocation(latLngbounds);
@@ -542,24 +543,15 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
      * @param isDetailMap true if the map shows the details of a journey, false if the map
      *                    shows user's tarcking
      */
-    private void addMarker(LatLng latLng, String title, String snippet, boolean isDetailMap){
+    private void addMarker(LatLng latLng, String title, boolean isDetailMap){
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(latLng);
-        if(snippet != null){
-            markerOptions.snippet(snippet);
-        }
         markerOptions.title(title);
         if(!isDetailMap){
             markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE));
             mCurrentLocationMarker = mMap.addMarker(markerOptions);
         }
         else{
-            if(title.contains(mActivity.getString(R.string.text_start))){
-                markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
-            }
-            else{
-                markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
-            }
             mJourneyMap.addMarker(markerOptions);
         }
 
@@ -580,7 +572,6 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
         addMarker(
                 latLng,
                 mActivity.getString(R.string.text_marker_current_position),
-                null,
                 false
         );
         if(mIsPathRecording){

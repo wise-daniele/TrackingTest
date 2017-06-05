@@ -8,7 +8,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Switch;
 
-import com.example.daniele.trackingtest.Constants;
+import com.example.daniele.trackingtest.utils.Constants;
 import com.example.daniele.trackingtest.R;
 import com.example.daniele.trackingtest.controller.MainController;
 import com.example.daniele.trackingtest.model.Journey;

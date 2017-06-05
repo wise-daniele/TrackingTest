@@ -1,4 +1,4 @@
-package com.example.daniele.trackingtest;
+package com.example.daniele.trackingtest.utils;
 
 import com.google.android.gms.location.LocationRequest;
 

@@ -9,10 +9,8 @@ import android.widget.TextView;
 
 import com.example.daniele.trackingtest.model.Journey;
 import com.example.daniele.trackingtest.R;
-import com.example.daniele.trackingtest.Utils;
+import com.example.daniele.trackingtest.utils.Utils;
 import com.example.daniele.trackingtest.model.Journeys;
-
-import java.util.List;
 
 /**
  * Created by daniele on 31/05/17.

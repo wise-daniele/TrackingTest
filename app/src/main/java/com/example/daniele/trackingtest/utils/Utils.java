@@ -1,9 +1,8 @@
-package com.example.daniele.trackingtest;
+package com.example.daniele.trackingtest.utils;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.location.Location;
-import android.util.Log;
 
 import com.example.daniele.trackingtest.model.Journeys;
 import com.google.android.gms.maps.model.LatLng;
