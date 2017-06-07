@@ -50,7 +50,7 @@ public class CustomInfoWindowAdapter implements GoogleMap.InfoWindowAdapter {
         }
         int intDistance = (int)distance;
         long journeyTimeDelta = mJourney.getEndTimestamp() - mJourney.getStartTimestamp();
-        float avgSpeed = Utils.computeAvgSpeed(intDistance, journeyTimeDelta);
+        double avgSpeed = Utils.computeAvgSpeed(intDistance, journeyTimeDelta);
         TextView textJourneyTime = (TextView) view.findViewById(R.id.text_journey_time);
         TextView textDistanceTo = (TextView) view.findViewById(R.id.text_distance_to);
         TextView textAverageSpeed = (TextView) view.findViewById(R.id.text_average_speed);

@@ -511,26 +511,18 @@ public class MainController implements OnMapReadyCallback, GoogleApiClient.Conne
             distance = distance + currentDistance;
             latestPoint = currentPoint;
         }
-        int intDistance = (int)distance;
-        long journeyTimeDelta = journey.getEndTimestamp() - journey.getStartTimestamp();
-        float avgSpeed = Utils.computeAvgSpeed(intDistance, journeyTimeDelta);
         mJourneyMap.addPolyline(polylineOptions);
         LatLngBounds latLngbounds = bounds.build();
-        String textMarkerStart = mActivity.getString(R.string.text_start) + " " +
-                Utils.getDateFromTimestamp(journey.getStartTimestamp());
-        String textMarkerEnd = mActivity.getString(R.string.text_end) + " " +
-                Utils.getDateFromTimestamp(journey.getEndTimestamp());
-        String textMarkerDistance = mActivity.getString(R.string.text_path_distance) + " " +
-                intDistance + " meters";
+
         mJourneyMap.setInfoWindowAdapter(new CustomInfoWindowAdapter(mActivity, journey));
         addMarker(
                 path.get(path.size()-1),
-                textMarkerStart,
+                mActivity.getString(R.string.text_start),
                 true
         );
         addMarker(
                 path.get(0),
-                textMarkerEnd,
+                mActivity.getString(R.string.text_end),
                 true
         );
         moveJourneyMapCameraToLocation(latLngbounds);

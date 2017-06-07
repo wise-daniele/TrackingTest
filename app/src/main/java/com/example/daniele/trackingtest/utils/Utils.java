@@ -79,9 +79,13 @@ public class Utils {
      * @param timeDelta Time elapsed (in milliseconds)
      * @return The average speed in Km/h
      */
-    public static float computeAvgSpeed(int space, long timeDelta){
-        space = space / 1000;
-        float time = (timeDelta / (float)1000) / ((float)(60 * 60));
-        return ((float)space)/time;
+    public static double computeAvgSpeed(int space, long timeDelta){
+        timeDelta = timeDelta / 1000;
+        double meterSecondsSpeed = (double)space/(double)timeDelta;
+        double kmHoursSpeed = meterSecondsSpeed * Constants.SPEED_CONVERSION_MS_TO_KMH;
+        kmHoursSpeed = kmHoursSpeed*100;
+        kmHoursSpeed = Math.round(kmHoursSpeed);
+        kmHoursSpeed = kmHoursSpeed/100;
+        return kmHoursSpeed;
     }
 }

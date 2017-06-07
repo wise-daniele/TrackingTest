@@ -26,4 +26,6 @@ public class Constants {
     //Date Utils
     public static final String DATE_FORMAT_NOW = "yyyy-MM-dd HH:mm:ss";
 
+    public static final double SPEED_CONVERSION_MS_TO_KMH = 3.6;
+
 }
